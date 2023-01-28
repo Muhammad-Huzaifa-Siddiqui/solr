@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserRepository extends SolrCrudRepository<User, Long> {
 
-    @Query("first_name:?0~0.8 OR email:?0~0.8 OR phone_1:?0~0.8 OR first_name:?0 OR email:?0 OR phone_1:?0")
+    @Query("{!boost bf=first_name^2}first_name:?0~0.8 OR {!boost bf=email^1.5}email:?0~0.8 " +
+            "OR {!boost bf=last_name^1.5}last_name:?0~0.8 OR first_name:?0 " +
+            "OR last_name:?0 OR (email:?0 AND email:*\"?0\"*)")
     Page<User> searchUser(String searchTerm, Pageable pageable);
 }
