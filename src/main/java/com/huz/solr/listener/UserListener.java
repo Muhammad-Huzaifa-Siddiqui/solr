@@ -30,13 +30,20 @@ public class UserListener implements ApplicationListener<UserTxEvent> {
     }
 
     private void saveSolrUserDocument(User solrUser){
-
-        solrTemplate.saveBean("user_rec", solrUser);
-        solrTemplate.commit("user_rec");
-        saveSolrUserInCache(solrUser);
+        try {
+            solrTemplate.saveBean("user_rec", solrUser);
+            solrTemplate.commit("user_rec");
+            saveSolrUserInCache(solrUser);
+        }catch (Exception e){
+            throw new RuntimeException("Error saving user to solr", e);
+        }
     }
     private void saveSolrUserInCache(User solrUser){
-        redisTemplate.opsForValue().set("solrUser:"+solrUser.getEmail(), solrUser);
-        log.info(String.format("User : %s saved to cache", solrUser.getUuid()));
+        try{
+            redisTemplate.opsForValue().set("solrUser:"+solrUser.getEmail(), solrUser);
+            log.info(String.format("User : %s saved to cache", solrUser.getEmail()));
+        }catch (Exception e){
+            throw new RuntimeException("Error saving user to redis", e);
+        }
     }
 }
