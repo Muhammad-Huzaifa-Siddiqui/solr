@@ -16,7 +16,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -33,8 +32,7 @@ public class UserService {
 
     @Autowired
     Transformer transformer;
-    @Autowired
-    JdbcTemplate jdbcTemplate;
+
     @Autowired
     UserTxRepository userTxRepository;
 
@@ -47,8 +45,6 @@ public class UserService {
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
-
-    private static final String SELECT_QUERY = "SELECT * from tbl_user";
 
     private static final String SOLR_URL = "http://localhost:8983/solr/user_rec";
 
@@ -72,11 +68,11 @@ public class UserService {
             User cacheUser = (User) redisTemplate.opsForValue().get("solrUser:"+searchTerm);
             UserDto userDto = modelMapper.map(cacheUser, UserDto.class);
             userDtos.add(userDto);
-            Page<UserDto> userPage = new PageImpl<>(userDtos);
             assert cacheUser != null;
-            log.info(String.format("User : %s saved to cache", cacheUser.getEmail()));
+            log.info(String.format("User : %s fetched from cache", cacheUser.getEmail()));
         }else{
             Page<User> users =userRepository.searchUser(searchTerm, pageable);
+            log.info("User fetched from solr");
             userDtos = users.getContent().stream()
                     .map(user -> modelMapper.map(user, UserDto.class))
                     .collect(Collectors.toList());
@@ -85,8 +81,7 @@ public class UserService {
     }
 
     public void importDataToSolr() throws SolrServerException, IOException {
-        List<UserTx> users = jdbcTemplate.query(SELECT_QUERY,
-                new BeanPropertyRowMapper<>(UserTx.class));
+        List<UserTx> users = userTxRepository.findAll();
        try{
            for(UserTx dBUser : users){
                solrClient.add(transformer.transform(dBUser));
